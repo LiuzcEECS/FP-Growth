@@ -1,7 +1,7 @@
 using namespace std;
 class node{
 
-    public:
+public:
 
     node(string _name, int _cnt, node * _father = NULL){
         name = _name;

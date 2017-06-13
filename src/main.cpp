@@ -17,9 +17,7 @@ int main(int argc, char ** argv){
     }
     FPtree * f = new FPtree(sup, bel);
     f->read(path.c_str());
-    f->construct();
-    //f->cal();
-    //f->output();
+    f->cal();
     delete f;
     return 0;
 }

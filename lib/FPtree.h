@@ -14,9 +14,14 @@
 using namespace std;
 
 char _line[200];
+map<string, int> * now_ft;
+map<vector<string>, int> total_cnt;
+vector<string> * input;
+vector<string> * stack;
+
 class FPtree{
 
-    public:
+public:
 
     FPtree(double _sup, double _bel){
         sup = _sup;
@@ -24,7 +29,7 @@ class FPtree{
         size = 0;
         trans.clear();
         result.clear();
-        root = NULL;
+        root = new node("root", 1);
     }
 
     ~FPtree(){
@@ -69,54 +74,47 @@ class FPtree{
     /**
      * construct: build a fp-tree
      */
-    void construct(){
+    void construct(node *_root, map<vector<string>, int> & _trans, map<string, int> & _ft, vector<string> _item_list, map<string, node *> & _header){
         string _string;
         vector<string> _vector;
         node * _node = NULL;
 
-        ft.clear();
-        item_list.clear();
-        header.clear();
+        _ft.clear();
+        _item_list.clear();
+        _header.clear();
+        now_ft = &_ft;
 
         //read every transcation and count the items
-        for(map<vector<string>, int>::iterator i = trans.begin(); i != trans.end(); i++){
+        for(map<vector<string>, int>::iterator i = _trans.begin(); i != _trans.end(); i++){
             for(int j = 0; j < (i->first).size(); j++){
                 _string = (i->first)[j];
-                if(ft.find(_string) == ft.end()){
-                    ft[_string] = (i->second);
+                if(_ft.find(_string) == _ft.end()){
+                    _ft[_string] = (i->second);
                 }
                 else{
-                    ft[_string] += i->second;
+                    _ft[_string] += i->second;
                 }
             }
         }
 
-        for(map<string, int>::iterator i = ft.begin(); i != ft.end(); i++){
-            if(i->second >= lim_s){
-                item_list.push_back(i->first);
-            }
-        }
-        sort(item_list.begin(), item_list.end(), cmp);
-
         //build the original fp-tree
-        root = new node("root", 1);
-        for(map<vector<string>, int>::iterator i = trans.begin(); i != trans.end(); i++){
-            _node = root;
+        for(map<vector<string>, int>::iterator i = _trans.begin(); i != _trans.end(); i++){
+            _node = _root;
             _vector = i->first;
             sort(_vector.begin(), _vector.end(), cmp);
             for(int j = 0; j < _vector.size(); j++){
-                if(ft[_vector[j]] >= lim_s){
+                if(_ft[_vector[j]] >= lim_s){
                     if(_node->child.find(_vector[j]) == _node->child.end()){
                         //insert a node
                         _node->child[_vector[j]] = new node(_vector[j], i->second, _node);
                         _node = _node->child[_vector[j]];
                         //insert a sibling
-                        if(header.find(_vector[j]) == header.end()){
-                            header[_vector[j]] = _node;
+                        if(_header.find(_vector[j]) == _header.end()){
+                            _header[_vector[j]] = _node;
                         }
                         else{
-                            _node->sibling = header[_vector[j]];
-                            header[_vector[j]] = _node;
+                            _node->sibling = _header[_vector[j]];
+                            _header[_vector[j]] = _node;
                         }
                     }
                     else{
@@ -127,7 +125,14 @@ class FPtree{
             }
         }
 
-        root->vis(0);
+        for(map<string, int>::iterator i = _ft.begin(); i != _ft.end(); i++){
+            if(i->second >= lim_s){
+                _item_list.push_back(i->first);
+            }
+        }
+        sort(_item_list.begin(), _item_list.end(), cmp);
+
+        _root->vis(0);
 
     }
 
@@ -135,34 +140,122 @@ class FPtree{
      * cmp: function used to compare two items based on their frequency
      */
     static bool cmp(string & x, string & y){
-        return ft[x] > ft[y];
+        return (*now_ft)[x] > (*now_ft)[y];
     }
 
-    private:
+    /**
+     * cal: calculate the frequency pattern
+     */
+    void cal(){
+        construct(root, trans, ft, item_list, header);
+        for(int i = item_list.size() - 1; i >= 0; i++){
+            prev.clear();
+            fp_growth(item_list[i]);
+        }
+    }
 
-        //support
-        double sup;
-        //belief
-        double bel;
-        //size of dataset
-        int size;
-        //min limit of support
-        int lim_s;
-        //min limit of belief
-        int lim_b;
+    /**
+     * get_subset: get every subset of the input set
+     * input: input set
+     * result: the list of output results
+     */
+    void dfs(int depth){
+        if(depth == input->size()){
+            total_cnt[*stack] = (*now_ft)[(*input)[0]];
+        }
+        else{
+            dfs(depth + 1);
+            stack->push_back((*input)[depth]);
+            dfs(depth + 1);
+            stack->pop_back();
+        }
+    }
+
+    /**
+     * fp_growth: 
+     * item: name of the item which is being mining
+     * prev: the items which are already part of the frequent pattern
+     */
+    void fp_growth(string & item){
+        node * _node = header[item];
+        node * leaf = NULL;
+        vector<string> path;
+        map<vector<string>, int> next_trans;
+        while(_node != NULL){
+            leaf = _node;
+            path.clear();
+            _node = _node->sibling;
+            while(leaf->father != NULL){
+                leaf = leaf->father;
+                path.push_back(leaf->name);
+            }
+        }
+        if(_node->father != NULL){
+            //in fp-tree the path will never be same as others.
+            next_trans[path] = _node->cnt;
+        }
+
+        node * next_root = new node("R", 1);
+        map<string, int> next_ft;
+        vector<string> next_item_list;
+        map<string, node *> next_header;
+        construct(next_root, next_trans, next_ft, next_item_list, next_header);
+
+        _node = next_root;
+        bool is_single = true;
+        while(1){
+            if(_node->child.size() > 1){
+                is_single = false;
+                break;
+            }
+            else if(_node->child.size() <= 0){
+                break;
+            }
+            _node = _node->child.begin()->second;
+        }
+        if(is_single){
+            prev.push_back(item);
+            if(next_item_list.size() > 0){
+                input = &next_item_list;
+                stack = &prev;
+                dfs(0);
+                delete stack;
+            }
+        }
+        else{
+            prev.push_back(item);
+            for(int i = next_item_list.size() - 1; i >= 0; i--){
+                fp_growth(next_item_list[i]);
+            }
+        }
+    }
 
 
-        //root of FPtree
-        node * root;
-        //table of transcation
-        map<vector<string>, int> trans;
-        //result
-        map<vector<string>, int> result;
-        //frequency table
-        static map<string, int> ft;
-        //list of frequent 1-itemsets (sets of only one item)
-        vector<string> item_list;
-        //head of every item in the fp-tree
-        map<string, node *> header;
+private:
+
+    //support
+    double sup;
+    //belief
+    double bel;
+    //size of dataset
+    int size;
+    //min limit of support
+    int lim_s;
+    //min limit of belief
+    int lim_b;
+
+    //root of FPtree
+    node * root;
+    //table of transcation
+    map<vector<string>, int> trans;
+    //result
+    map<vector<string>, int> result;
+    //frequency table
+    map<string, int> ft;
+    //list of frequent 1-itemsets (sets of only one item)
+    vector<string> item_list;
+    //head of every item in the fp-tree
+    map<string, node *> header;
+    //list of suffix
+    vector<string> prev;
 };
-    map<string, int> FPtree::ft;
