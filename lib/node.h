@@ -13,15 +13,15 @@ class node{
 
     void vis(int depth){
         for(int i = 1; i <= depth; i++){
-            printf("-----");
+            printf("----------");
         }
         if(father == NULL){
-            printf("R");
+            printf("R\n");
         }
         else{
             printf("%s: %d\n", name.c_str(), cnt);
         }
-        for(map<string, node *>::iterator i; i!=child.end(); i++){
+        for(map<string, node *>::iterator i = child.begin(); i!=child.end(); i++){
             printf("|");
             (i->second)->vis(depth+1);
         }
