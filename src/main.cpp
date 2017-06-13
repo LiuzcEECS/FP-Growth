@@ -2,22 +2,24 @@
 #include<string>
 #include<math.h>
 #include<stdlib.h>
-#include "../lib/FPtree.hpp"
+#include "../lib/FPtree.h"
 
 using namespace std;
 
 int main(int argc, char ** argv){
 
     int i;
-    string path = char[0];
-    double sup = atof(char[1]);
-    double bel = atof(char[2]);
-
-    FPtree f(sup, bel);
-    f.read(path);
-    f.construct();
-    //f.cal();
-    //f.output();
+    string path = argv[1];
+    double sup = atof(argv[2]);
+    double bel = 0.7;
+    if(argc > 3){
+        double bel = atof(argv[3]);
+    }
+    FPtree * f = new FPtree(sup, bel);
+    f->read(path.c_str());
+    f->construct();
+    //f->cal();
+    //f->output();
     delete f;
     return 0;
 }
