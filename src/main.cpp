@@ -4,6 +4,7 @@
 #include<stdlib.h>
 //#define _DEBUG
 //#define _TREE
+//#define _PARA
 #include "../lib/FPtree.h"
 
 using namespace std;

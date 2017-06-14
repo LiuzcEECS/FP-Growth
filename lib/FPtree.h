@@ -9,9 +9,17 @@
 #include<memory.h>
 #include<stdio.h>
 #include<cstdio>
+#include<omp.h>
 #include "node.h"
+#define THREAD 4
 #define MAX_LENGTH 500
 using namespace std;
+
+#ifdef _PARA
+static omp_lock_t _lock;
+#endif
+
+vector<node *> siblings;
 
 char _line[500];
 map<string, int> * now_ft;
@@ -22,8 +30,10 @@ vector<string> * stack;
 class FPtree{
 
 public:
-
     FPtree(double _sup, double _bel){
+        #ifdef _PARA
+        omp_set_num_threads(THREAD);
+        #endif
         sup = _sup;
         bel = _bel;
         size = 0;
@@ -107,50 +117,68 @@ public:
         now_ft = &_ft;
 
         //read every transcation and count the items
-        for(map<vector<string>, int>::iterator i = _trans.begin(); i != _trans.end(); i++){
-            for(int j = 0; j < (i->first).size(); j++){
-                _string = (i->first)[j];
-                if(_ft.find(_string) == _ft.end()){
-                    _ft[_string] = (i->second);
-                }
-                else{
-                    _ft[_string] += i->second;
+        #ifdef _PARA
+        //#pragma omp parallel private(_string)
+        #endif
+        {
+            for(map<vector<string>, int>::iterator i = _trans.begin(); i != _trans.end(); i++){
+                //#pragma omp single nowait
+                {
+                    for(int j = 0; j < (i->first).size(); j++){
+                        _string = (i->first)[j];
+                        if(_ft.find(_string) == _ft.end()){
+                            _ft[_string] = (i->second);
+                        }
+                        else{
+                            _ft[_string] += i->second;
+                        }
+                    }
                 }
             }
         }
 
         //build the original fp-tree
-        for(map<vector<string>, int>::iterator i = _trans.begin(); i != _trans.end(); i++){
-            _node = _root;
-            _vector = i->first;
-            sort(_vector.begin(), _vector.end(), cmp);
-            for(int j = 0; j < _vector.size(); j++){
-                if(_ft[_vector[j]] >= lim_s){
-                    if(_node->child.find(_vector[j]) == _node->child.end()){
-                        //insert a node
-                        _node->child[_vector[j]] = new node(_vector[j], i->second, _node);
-                        _node = _node->child[_vector[j]];
-                        //insert a sibling
-                        if(_header.find(_vector[j]) == _header.end()){
-                            _header[_vector[j]] = _node;
+        #ifdef _PARA
+        //#pragma omp parallel private(_node)
+        #endif
+        {
+            for(map<vector<string>, int>::iterator i = _trans.begin(); i != _trans.end(); i++){
+                //#pragma omp single nowait
+                {
+                    _node = _root;
+                    vector<string> tem_vector = i->first;
+                    sort(tem_vector.begin(), tem_vector.end(), cmp);
+                    for(int j = 0; j < tem_vector.size(); j++){
+                        if(_ft[tem_vector[j]] >= lim_s){
+                            if(_node->child.find(tem_vector[j]) == _node->child.end()){
+                                //insert a node
+                                _node->child[tem_vector[j]] = new node(tem_vector[j], i->second, _node);
+                                _node = _node->child[tem_vector[j]];
+                                //insert a sibling
+                                if(_header.find(tem_vector[j]) == _header.end()){
+                                    _header[tem_vector[j]] = _node;
+                                }
+                                else{
+                                    _node->sibling = _header[tem_vector[j]];
+                                    _header[tem_vector[j]] = _node;
+                                }
+                            }
+                            else{
+                                _node = _node->child[tem_vector[j]];
+                                _node->cnt += i->second;
+                            }
                         }
-                        else{
-                            _node->sibling = _header[_vector[j]];
-                            _header[_vector[j]] = _node;
-                        }
-                    }
-                    else{
-                        _node = _node->child[_vector[j]];
-                        _node->cnt += i->second;
                     }
                 }
             }
         }
 
         for(map<string, int>::iterator i = _ft.begin(); i != _ft.end(); i++){
-            //cout<<(i->first)<<" "<<(i->second)<<endl;
-            if(i->second >= lim_s){
-                _item_list.push_back(i->first);
+            {
+                //cout<<(i->first)<<" "<<(i->second)<<endl;
+                if(i->second >= lim_s){
+                    _item_list.push_back(i->first);
+                }
             }
         }
         sort(_item_list.begin(), _item_list.end(), cmp);
@@ -197,25 +225,39 @@ public:
      * prev: the items which are already part of the frequent pattern
      */
     void fp_growth(string & item, map<string, node * > & now_header, map<string, int> & last_ft){
-        node * _node = now_header[item];
         node * leaf = NULL;
-        vector<string> path;
+        node * _node = now_header[item];
         map<vector<string>, int> next_trans;
+
+        siblings.clear();
         while(_node != NULL){
-            leaf = _node->father;
-            path.clear();
+            siblings.push_back(_node);
+            _node = _node->sibling;
+        }
+
+        #ifdef _PARA
+        #pragma omp parallel for private(leaf)
+        #endif
+        for(int i = 0; i < siblings.size(); i++){
+            vector<string> path;
+
+            leaf = siblings[i]->father;
             while(leaf->father != NULL){
                 path.push_back(leaf->name);
                 leaf = leaf->father;
             }
             if(path.size() != 0){
                 //in fp-tree the path will never be same as others.
-                next_trans[path] = _node->cnt;
+                #ifdef _PARA
+                omp_set_lock(&_lock);
+                next_trans[path] = siblings[i]->cnt;
+                omp_unset_lock(&_lock);
+                #else
+                next_trans[path] = siblings[i]->cnt;
+                #endif
             }
-            _node = _node->sibling;
         }
 
-        
         node * next_root = new node("root", 1);
         map<string, int> next_ft;
         vector<string> next_item_list;
@@ -268,6 +310,9 @@ public:
      * cal: calculate the frequency pattern
      */
     void cal(){
+        #ifdef _PARA
+        omp_init_lock(&_lock);
+        #endif
         construct(root, trans, ft, item_list, header);
         for(int i = item_list.size() - 1; i >= 0; i--){
             prev.clear();
@@ -276,6 +321,9 @@ public:
             #endif
             fp_growth(item_list[i], header, ft);
         }
+        #ifdef _PARA
+        omp_destroy_lock(&_lock);
+        #endif
     }
 
 
