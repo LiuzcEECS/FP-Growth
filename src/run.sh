@@ -1,2 +1,2 @@
 g++ main.cpp -o main.o
-./main.o test.txt 0.8
+./main.o test.txt 0.4
