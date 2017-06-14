@@ -10,10 +10,10 @@
 #include<stdio.h>
 #include<cstdio>
 #include "node.h"
-#define MAX_LENGTH 200
+#define MAX_LENGTH 500
 using namespace std;
 
-char _line[200];
+char _line[500];
 map<string, int> * now_ft;
 map<vector<string>, int> total_cnt;
 vector<string> * input;
@@ -39,23 +39,45 @@ public:
      * read: load the dataset
      * _f: dataset file path
      */
-    void read(const char * _f){
+    void read(string _f){
         // read file stream
         string _item;
-        ifstream _cin(_f);
+        ifstream _cin(_f.c_str());
         // hash_table for repetitive items
         set<string> _set;
         vector<string> _v;
+        bool is_csv = false;
+        if(_f.find("txt") == -1){
+            is_csv = true;
+            _cin.getline(_line, MAX_LENGTH);
+        }
         while(_cin.getline(_line, MAX_LENGTH)){
             size++;
             _set.clear();
             _v.clear();
             istringstream _line_s(_line);
-            while(_line_s >> _item){
-                if(_set.find(_item) == _set.end()){
-                    //printf("%s ", _item.c_str());
-                    _set.insert(_item);
-                    _v.push_back(_item);
+            //cout<<size<<" "<<_line<<endl;
+            if(!is_csv){
+                while(_line_s >> _item){
+                    if(_set.find(_item) == _set.end()){
+                        #ifdef _DEBUG
+                        printf("%s ", _item.c_str());
+                        #endif
+                        _set.insert(_item);
+                        _v.push_back(_item);
+                    }
+                }
+            }
+            // read csv file
+            else{
+                while(std::getline(_line_s, _item, ',')){
+                    if(_set.find(_item) == _set.end()){
+                        #ifdef _DEBUG
+                        printf("%s ", _item.c_str());
+                        #endif
+                        _set.insert(_item);
+                        _v.push_back(_item);
+                    }
                 }
             }
             if(trans.find(_v) == trans.end()){
@@ -68,13 +90,13 @@ public:
 
         lim_s = int(size * sup);
         lim_b = int(size * bel);
-        //printf("%d %d %d\n", size, lim_s, lim_b);
+        printf("%d %d %d\n", size, lim_s, lim_b);
     }
 
     /**
      * construct: build a fp-tree
      */
-    void construct(node *_root, map<vector<string>, int> & _trans, map<string, int> & _ft, vector<string> _item_list, map<string, node *> & _header){
+    void construct(node *_root, map<vector<string>, int> & _trans, map<string, int> & _ft, vector<string> & _item_list, map<string, node *> & _header){
         string _string;
         vector<string> _vector;
         node * _node = NULL;
@@ -126,13 +148,16 @@ public:
         }
 
         for(map<string, int>::iterator i = _ft.begin(); i != _ft.end(); i++){
+            //cout<<(i->first)<<" "<<(i->second)<<endl;
             if(i->second >= lim_s){
                 _item_list.push_back(i->first);
             }
         }
         sort(_item_list.begin(), _item_list.end(), cmp);
-
+        
+        #ifdef _TREE
         _root->vis(0);
+        #endif
 
     }
 
@@ -143,17 +168,7 @@ public:
         return (*now_ft)[x] > (*now_ft)[y];
     }
 
-    /**
-     * cal: calculate the frequency pattern
-     */
-    void cal(){
-        construct(root, trans, ft, item_list, header);
-        for(int i = item_list.size() - 1; i >= 0; i++){
-            prev.clear();
-            fp_growth(item_list[i]);
-        }
-    }
-
+    
     /**
      * get_subset: get every subset of the input set
      * input: input set
@@ -161,7 +176,12 @@ public:
      */
     void dfs(int depth){
         if(depth == input->size()){
-            total_cnt[*stack] = (*now_ft)[(*input)[0]];
+            if(input->size() > 0){
+                if(total_cnt.find(*stack) == total_cnt.end()){
+                    total_cnt[*stack] = (*now_ft)[(*stack)[stack->size() - 1]];
+                }
+            }
+            //printf("hit the end\n");
         }
         else{
             dfs(depth + 1);
@@ -176,29 +196,34 @@ public:
      * item: name of the item which is being mining
      * prev: the items which are already part of the frequent pattern
      */
-    void fp_growth(string & item){
-        node * _node = header[item];
+    void fp_growth(string & item, map<string, node * > & now_header, map<string, int> & last_ft){
+        node * _node = now_header[item];
         node * leaf = NULL;
         vector<string> path;
         map<vector<string>, int> next_trans;
         while(_node != NULL){
-            leaf = _node;
+            leaf = _node->father;
             path.clear();
-            _node = _node->sibling;
             while(leaf->father != NULL){
-                leaf = leaf->father;
                 path.push_back(leaf->name);
+                leaf = leaf->father;
             }
-        }
-        if(_node->father != NULL){
-            //in fp-tree the path will never be same as others.
-            next_trans[path] = _node->cnt;
+            if(path.size() != 0){
+                //in fp-tree the path will never be same as others.
+                next_trans[path] = _node->cnt;
+            }
+            _node = _node->sibling;
         }
 
-        node * next_root = new node("R", 1);
+        
+        node * next_root = new node("root", 1);
         map<string, int> next_ft;
         vector<string> next_item_list;
         map<string, node *> next_header;
+        #ifdef _DEBUG
+        printf("size of trans is %d \n", int(next_trans.size()));
+        #endif
+        //cout<<next_trans.begin()->second<<endl;
         construct(next_root, next_trans, next_ft, next_item_list, next_header);
 
         _node = next_root;
@@ -213,20 +238,57 @@ public:
             }
             _node = _node->child.begin()->second;
         }
+        #ifdef _DEBUG
+        printf("isSingle is %d\n", is_single);
+        #endif
         if(is_single){
             prev.push_back(item);
-            if(next_item_list.size() > 0){
-                input = &next_item_list;
-                stack = &prev;
-                dfs(0);
-                delete stack;
-            }
+            //cout<<prev[0]<<endl;
+            total_cnt[prev] = last_ft[item];
+            //if(next_item_list.size() > 0){
+            input = &next_item_list;
+            stack = &prev;
+            dfs(0);
+            prev.pop_back();
+            //}
         }
         else{
             prev.push_back(item);
             for(int i = next_item_list.size() - 1; i >= 0; i--){
-                fp_growth(next_item_list[i]);
+                #ifdef _DEBUG
+                printf("\nthis turn's item is %s\n", next_item_list[i].c_str());
+                #endif
+                fp_growth(next_item_list[i], next_header, next_ft);
             }
+            prev.pop_back();
+        }
+    }
+
+    /**
+     * cal: calculate the frequency pattern
+     */
+    void cal(){
+        construct(root, trans, ft, item_list, header);
+        for(int i = item_list.size() - 1; i >= 0; i--){
+            prev.clear();
+            #ifdef _DEBUG
+            printf("\nthis turn's item is %s\n", item_list[i].c_str());
+            #endif
+            fp_growth(item_list[i], header, ft);
+        }
+    }
+
+
+    /*
+     * output: cout every frequent pattern
+     */
+    void output(){
+        printf("Frequent pattern\n");
+        for(map<vector<string>, int>::iterator i = total_cnt.begin(); i != total_cnt.end(); i++){
+            for(int j = 0; j < i->first.size(); j++){
+                printf("%s ", (i->first)[j].c_str());
+            }
+            printf("%d \n", i->second);
         }
     }
 

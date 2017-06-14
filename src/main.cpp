@@ -2,6 +2,8 @@
 #include<string>
 #include<math.h>
 #include<stdlib.h>
+//#define _DEBUG
+//#define _TREE
 #include "../lib/FPtree.h"
 
 using namespace std;

@@ -16,7 +16,8 @@ public:
             printf("----------");
         }
         if(father == NULL){
-            printf("R\n");
+            //printf("R\n");
+            printf("%s: %d\n", name.c_str(), cnt);
         }
         else{
             printf("%s: %d\n", name.c_str(), cnt);
