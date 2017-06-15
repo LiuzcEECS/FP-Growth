@@ -28,6 +28,7 @@ int main(int argc, char ** argv){
     //Output frequent patterns
     f->output();
     //Association analysis
+    printf("\n");
     f->aa();
     delete f;
     return 0;
