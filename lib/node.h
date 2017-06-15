@@ -1,7 +1,14 @@
 using namespace std;
-class node{
 
+//Class of nodes of FP tree
+class node{
 public:
+
+    /*
+     * _name: name of this item
+     * _cnt: the frequency of this node
+     * _father: the parent of this node
+     */
 
     node(string _name, int _cnt, node * _father = NULL){
         name = _name;
@@ -11,17 +18,19 @@ public:
         child.clear();
     }
 
+    /*
+     * vis: print the tree
+     * depth: the depth of this node
+     */
+
     void vis(int depth){
+        //print the branch of this node
         for(int i = 1; i <= depth; i++){
             printf("----------");
         }
-        if(father == NULL){
-            //printf("R\n");
-            printf("%s: %d\n", name.c_str(), cnt);
-        }
-        else{
-            printf("%s: %d\n", name.c_str(), cnt);
-        }
+        // print the name
+        printf("%s: %d\n", name.c_str(), cnt);
+        //print its children
         for(map<string, node *>::iterator i = child.begin(); i!=child.end(); i++){
             printf("|");
             (i->second)->vis(depth+1);

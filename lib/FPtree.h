@@ -14,22 +14,36 @@
 #define MAX_LENGTH 500
 using namespace std;
 
+// the buffer for reading every lines of dataset
 char _line[500];
+// the frequent table ptr for compare function
 map<string, int> * now_ft;
+// total count of every frequent pattern
 map<vector<string>, int> total_cnt;
+// total count of every frequent pattern (the patterns' list has been sorted)
 map<vector<string>, int> total_cnt_sort;
+// total count of every frequent pattern (the patterns' list has been sorted and converted to a vector to sort by map's value)
 vector<pair<vector<string>, int> > total_cnt_sort_vector;
+// vector for nodes in a single path
 vector<string> * input;
+// stacks to find every combination of nodes in a single path (by dfs)
 vector<string> * stack;
 
+// compare function for vector converted from map (in order to sort by value)
 bool cmp_map(pair<vector<string>, int> & a, pair<vector<string>, int> & b){
     return a.second > b.second;
 }
 
+// Class of whole FPtree and every step of FP-Growth
 class FPtree{
 
 public:
 
+    /*
+     * _sup: support
+     * _bel: confidence
+     * size: numbers of total transcations
+     */
     FPtree(double _sup, double _bel){
         sup = _sup;
         bel = _bel;
@@ -52,7 +66,10 @@ public:
         ifstream _cin(_f.c_str());
         // hash_table for repetitive items
         set<string> _set;
+        // vector used to store every transcation
         vector<string> _v;
+
+        // reading csv file is a little different
         bool is_csv = false;
         if(_f.find("txt") == -1){
             is_csv = true;
@@ -87,6 +104,7 @@ public:
                     }
                 }
             }
+            //trans is lists of all transcations
             if(trans.find(_v) == trans.end()){
                 trans[_v] = 1;
             }
@@ -95,6 +113,7 @@ public:
             }
         }
 
+        //lim_s is support frequency, and lim_b is confidence
         lim_s = int(size * sup);
         lim_b = bel;
         printf("%d %d %.4f\n", size, lim_s, lim_b);
@@ -102,8 +121,15 @@ public:
 
     /**
      * construct: build a fp-tree
+     * _root: the root of this tree
+     * _trans: all the transcations in this sub-tree
+     * _ft: frequent table of _trans
+     * _item_list: every item in _trans
+     * _header: the head ptrs of sibling linked lists
      */
+
     void construct(node *_root, map<vector<string>, int> & _trans, map<string, int> & _ft, vector<string> & _item_list, map<string, node *> & _header){
+        // temp variables
         string _string;
         vector<string> _vector;
         node * _node = NULL;
@@ -130,10 +156,16 @@ public:
         for(map<vector<string>, int>::iterator i = _trans.begin(); i != _trans.end(); i++){
             _node = _root;
             _vector = i->first;
+            // at first we sort every transcation by the frequency of items
             sort(_vector.begin(), _vector.end(), cmp);
+
             for(int j = 0; j < _vector.size(); j++){
+                // for every item, we build the tree from top to down
+                
+                // only ones more than support can be inserted into the tree
                 if(_ft[_vector[j]] >= lim_s){
                     if(_node->child.find(_vector[j]) == _node->child.end()){
+
                         //insert a node
                         _node->child[_vector[j]] = new node(_vector[j], i->second, _node);
                         _node = _node->child[_vector[j]];
@@ -145,8 +177,10 @@ public:
                             _node->sibling = _header[_vector[j]];
                             _header[_vector[j]] = _node;
                         }
+
                     }
                     else{
+                        // the node already exists we only increase the frequency
                         _node = _node->child[_vector[j]];
                         _node->cnt += i->second;
                     }
@@ -154,6 +188,7 @@ public:
             }
         }
 
+        //calculate item list and sort it
         for(map<string, int>::iterator i = _ft.begin(); i != _ft.end(); i++){
             //cout<<(i->first)<<" "<<(i->second)<<endl;
             if(i->second >= lim_s){
@@ -163,6 +198,7 @@ public:
         sort(_item_list.begin(), _item_list.end(), cmp);
         
         #ifdef _TREE
+        // print the tree
         _root->vis(0);
         #endif
 
@@ -178,13 +214,14 @@ public:
 
     
     /**
-     * get_subset: get every subset of the input set
-     * input: input set
-     * result: the list of output results
+     * dfs: get every subset of the nodes on the single path
+     * depth: depth of dfs
      */
     void dfs(int depth){
         if(depth == input->size()){
+            // we get to the end of the path
             if(input->size() > 0){
+                // save the combination
                 if(total_cnt.find(*stack) == total_cnt.end()){
                     total_cnt[*stack] = (*now_ft)[(*stack)[stack->size() - 1]];
                 }
@@ -192,6 +229,7 @@ public:
             //printf("hit the end\n");
         }
         else{
+            // search for every combination
             dfs(depth + 1);
             stack->push_back((*input)[depth]);
             dfs(depth + 1);
@@ -200,16 +238,23 @@ public:
     }
 
     /**
-     * fp_growth: 
+     * fp_growth: the main recursive function for fp growth algorithm
      * item: name of the item which is being mining
-     * prev: the items which are already part of the frequent pattern
+     * item_head: the head this item's siblings in this conditional tree
+     * last_ft: the frequent table of this conditional tree
      */
-    void fp_growth(string & item, map<string, node * > & now_header, map<string, int> & last_ft){
-        node * _node = now_header[item];
+    void fp_growth(string & item, node * & item_head, map<string, int> & last_ft){
+        // head of the siblings of this item
+        node * _node = item_head;
+        // ptr for leaf in a path
         node * leaf = NULL;
+        // path on the tree
         vector<string> path;
+        // the transcations in conditional pattern base
         map<vector<string>, int> next_trans;
+        // loop through every sibling
         while(_node != NULL){
+            // get paths of siblings and add it to transcation for next conditional tree
             leaf = _node->father;
             path.clear();
             while(leaf->father != NULL){
@@ -217,13 +262,13 @@ public:
                 leaf = leaf->father;
             }
             if(path.size() != 0){
-                //in fp-tree the path will never be same as others.
+                //in fp-tree the paths of different nodes will never be the same
                 next_trans[path] = _node->cnt;
             }
             _node = _node->sibling;
         }
 
-        
+        // variables for next conditional tree
         node * next_root = new node("root", 1);
         map<string, int> next_ft;
         vector<string> next_item_list;
@@ -231,10 +276,12 @@ public:
         #ifdef _DEBUG
         printf("size of trans is %d \n", int(next_trans.size()));
         #endif
-        //cout<<next_trans.begin()->second<<endl;
+
+        // construct the conditional tree of this item
         construct(next_root, next_trans, next_ft, next_item_list, next_header);
 
         _node = next_root;
+        // check whether there is only a single path in the next conditional tree
         bool is_single = true;
         while(1){
             if(_node->child.size() > 1){
@@ -250,6 +297,8 @@ public:
         printf("isSingle is %d\n", is_single);
         #endif
         if(is_single){
+            // if there is, just mining every combination of the suffix and save them
+
             prev.push_back(item);
             //cout<<prev[0]<<endl;
             total_cnt[prev] = last_ft[item];
@@ -261,13 +310,15 @@ public:
             //}
         }
         else{
+            // if not, we push this item into suffix and save the new suffix as a fp
             prev.push_back(item);
+            // then loop through every item of which frequency larger than support and try to get their conditional tree until the tree is empty or a single path
             for(int i = next_item_list.size() - 1; i >= 0; i--){
                 total_cnt[prev] = last_ft[item];
                 #ifdef _DEBUG
                 printf("\nthis turn's item is %s\n", next_item_list[i].c_str());
                 #endif
-                fp_growth(next_item_list[i], next_header, next_ft);
+                fp_growth(next_item_list[i], next_header[next_item_list[i]], next_ft);
             }
             prev.pop_back();
         }
@@ -277,33 +328,40 @@ public:
      * cal: calculate the frequency pattern
      */
     void cal(){
+        // first construct the tree
         construct(root, trans, ft, item_list, header);
+        // then loop through every item of which frequency larger than support and try to get their conditional tree
         for(int i = item_list.size() - 1; i >= 0; i--){
             prev.clear();
             #ifdef _DEBUG
             printf("\nthis turn's item is %s\n", item_list[i].c_str());
             #endif
-            fp_growth(item_list[i], header, ft);
+            fp_growth(item_list[i], header[item_list[i]], ft);
         }
     }
 
 
     /*
-     * output: cout every frequent pattern
+     * output: print every frequent pattern
      */
     void output(){
         printf("Frequent pattern\n");
         total_cnt_sort.clear();
         total_cnt_sort_vector.clear();
         now_ft = &ft;
+
+        //loop through every fp and sort the items in a key in the order of frequency
         for(map<vector<string>, int>::iterator i = total_cnt.begin(); i != total_cnt.end(); i++){
             vector<string> _vector = i->first;
             int cnt = i->second;
             sort(_vector.begin(), _vector.end(), cmp);
             total_cnt_sort[_vector] = cnt;
+            // convert map to vector
             total_cnt_sort_vector.push_back(pair<vector<string>, int>(_vector, cnt));
         }
+        // sort the fp by the values
         sort(total_cnt_sort_vector.begin(), total_cnt_sort_vector.end(), cmp_map);
+
         for(int i = 0; i < total_cnt_sort.size(); i++){
             for(int j = 0; j < total_cnt_sort_vector[i].first.size(); j++){
                 printf("%s ", (total_cnt_sort_vector[i].first)[j].c_str());
@@ -319,20 +377,28 @@ public:
         printf("Associate analysis\n");
 
         for(map<vector<string>, int>::iterator i = total_cnt_sort.begin(); i != total_cnt_sort.end(); i++){
+            // temp variable
             vector<string> _vector = i->first;
             int cnt = _vector.size();
+
+            // association rule looks like "A -> B"
             for(int l = 1; l < (1 << cnt) - 1; l++){
+                // v1 is A and v2 is B
                 vector<string> v1;
                 vector<string> v2;
+                // we represent the subset as a binary number
                 for(int k = 1; k <= cnt; k++){
                     if((l >> (k - 1)) & 1) v1.push_back(_vector[k-1]);
                     else v2.push_back(_vector[k-1]);
                 }
+                // check if we get a wrong subset (I never meet an error)
                 if(total_cnt_sort.find(v1) == total_cnt_sort.end()){
                     cout<<"error"<<endl;
                     continue;
                 }
+                // calculate the confidence of this rule
                 double _bel = (i->second) / double(total_cnt_sort[v1]);
+                // check is the confidence is larger than our limit
                 if(_bel < lim_b) continue;
                 for(int j = 0; j < v1.size(); j++){
                     printf("%s ", (v1)[j].c_str());
