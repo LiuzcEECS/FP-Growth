@@ -1,0 +1,106 @@
+ QWidget{
+    background: rgb(30,30,30);
+}
+QLineEdit{
+    color: rgb(200,200,200);
+    background: rgb(60,60,60);
+    font: Consolas;
+    border: 0px;
+}
+QPushButton{
+color: rgb(240,240,240);
+	background: rgb(80,80,80);
+	border-radius: 5px;
+    font: Consolas;
+	border: 0px;
+    }
+ QPushButton::hover{
+	background: rgb(120,120,120);
+    }
+ QFrame{
+     font: Consolas;
+	background: rgb(30,30,30);
+     }
+ QLabel{
+	color: rgb(120,120,120);
+     font: Consolas;
+     }
+QSlider  
+{  
+    background-color: rgb(30,30,30);    
+}  
+QSlider::groove:horizontal  
+{  
+    height: 6px;  
+    background-color: rgb(27, 158, 188);    
+}  
+QSlider::groove:vertical  
+{  
+    width: 6px;  
+    background-color: rgb(27, 158, 188);    
+}  
+
+QSlider::handle:horizontal   
+{  
+    background: white;  
+    width: 8px;  
+    height: 8px;  
+    margin: -2px -4px -2px -4px;  
+    border-radius:5px;   
+    border: 1px solid #ffffff;  
+}
+QScrollBar:vertical
+{
+    width:8px;
+    background:rgba(0,0,0,0%);
+    margin:0px,0px,0px,0px;
+    padding-top:9px;   
+    padding-bottom:9px;
+}
+QScrollBar::handle:vertical
+{
+    width:8px;
+    background:rgba(200,200,200,50%);
+    border-radius:4px;   
+    min-height:20;
+}
+QScrollBar::handle:vertical:hover
+{
+    width:8px;
+    background:rgba(200,200,200,25%);
+    border-radius:4px;
+    min-height:20;
+}
+QScrollBar::add-line:vertical
+{
+    height:9px;width:8px;
+    border-image:url(./img/3.png);
+    subcontrol-position:bottom;
+}
+QScrollBar::sub-line:vertical
+{
+    height:9px;width:8px;
+    border-image:url(./img/1.png);
+    subcontrol-position:top;
+}
+QScrollBar::add-line:vertical:hover 
+{
+    height:9px;width:8px;
+    border-image:url(./img/4.png);
+    subcontrol-position:bottom;
+}
+QScrollBar::sub-line:vertical:hover
+{
+    height:9px;width:8px;
+    border-image:url(./img/2.png);
+    subcontrol-position:top;
+}
+QScrollBar::add-page:vertical,QScrollBar::sub-page:vertical
+{
+    background:rgba(0,0,0,10%);
+    border-radius:4px;
+}
+QListWidget{
+    color: rgb(180,180,180);
+    }
+
