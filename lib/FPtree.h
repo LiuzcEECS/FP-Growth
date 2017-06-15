@@ -9,6 +9,7 @@
 #include<memory.h>
 #include<stdio.h>
 #include<cstdio>
+#include<utility>
 #include "node.h"
 #define MAX_LENGTH 500
 using namespace std;
@@ -17,8 +18,13 @@ char _line[500];
 map<string, int> * now_ft;
 map<vector<string>, int> total_cnt;
 map<vector<string>, int> total_cnt_sort;
+vector<pair<vector<string>, int> > total_cnt_sort_vector;
 vector<string> * input;
 vector<string> * stack;
+
+bool cmp_map(pair<vector<string>, int> & a, pair<vector<string>, int> & b){
+    return a.second > b.second;
+}
 
 class FPtree{
 
@@ -288,16 +294,21 @@ public:
     void output(){
         printf("Frequent pattern\n");
         total_cnt_sort.clear();
+        total_cnt_sort_vector.clear();
         now_ft = &ft;
         for(map<vector<string>, int>::iterator i = total_cnt.begin(); i != total_cnt.end(); i++){
             vector<string> _vector = i->first;
             int cnt = i->second;
             sort(_vector.begin(), _vector.end(), cmp);
             total_cnt_sort[_vector] = cnt;
-            for(int j = 0; j < i->first.size(); j++){
-                printf("%s ", (i->first)[j].c_str());
+            total_cnt_sort_vector.push_back(pair<vector<string>, int>(_vector, cnt));
+        }
+        sort(total_cnt_sort_vector.begin(), total_cnt_sort_vector.end(), cmp_map);
+        for(int i = 0; i < total_cnt_sort.size(); i++){
+            for(int j = 0; j < total_cnt_sort_vector[i].first.size(); j++){
+                printf("%s ", (total_cnt_sort_vector[i].first)[j].c_str());
             }
-            printf("%d \n", i->second);
+            printf("%d \n", total_cnt_sort_vector[i].second);
         }
     }
 
