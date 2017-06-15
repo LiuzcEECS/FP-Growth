@@ -16,6 +16,7 @@ using namespace std;
 char _line[500];
 map<string, int> * now_ft;
 map<vector<string>, int> total_cnt;
+map<vector<string>, int> total_cnt_sort;
 vector<string> * input;
 vector<string> * stack;
 
@@ -89,8 +90,8 @@ public:
         }
 
         lim_s = int(size * sup);
-        lim_b = int(size * bel);
-        printf("%d %d %d\n", size, lim_s, lim_b);
+        lim_b = bel;
+        printf("%d %d %.4f\n", size, lim_s, lim_b);
     }
 
     /**
@@ -165,6 +166,7 @@ public:
      * cmp: function used to compare two items based on their frequency
      */
     static bool cmp(string & x, string & y){
+        if((*now_ft)[x] == (*now_ft)[y]) return x > y;
         return (*now_ft)[x] > (*now_ft)[y];
     }
 
@@ -255,6 +257,7 @@ public:
         else{
             prev.push_back(item);
             for(int i = next_item_list.size() - 1; i >= 0; i--){
+                total_cnt[prev] = last_ft[item];
                 #ifdef _DEBUG
                 printf("\nthis turn's item is %s\n", next_item_list[i].c_str());
                 #endif
@@ -284,12 +287,54 @@ public:
      */
     void output(){
         printf("Frequent pattern\n");
+        total_cnt_sort.clear();
+        now_ft = &ft;
         for(map<vector<string>, int>::iterator i = total_cnt.begin(); i != total_cnt.end(); i++){
+            vector<string> _vector = i->first;
+            int cnt = i->second;
+            sort(_vector.begin(), _vector.end(), cmp);
+            total_cnt_sort[_vector] = cnt;
             for(int j = 0; j < i->first.size(); j++){
                 printf("%s ", (i->first)[j].c_str());
             }
             printf("%d \n", i->second);
         }
+    }
+
+    /**
+     * aa: Associate analysis
+     */
+    void aa(){
+        printf("Associate analysis\n");
+
+        for(map<vector<string>, int>::iterator i = total_cnt_sort.begin(); i != total_cnt_sort.end(); i++){
+            vector<string> _vector = i->first;
+            int cnt = _vector.size();
+            for(int l = 1; l < (1 << cnt) - 1; l++){
+                vector<string> v1;
+                vector<string> v2;
+                for(int k = 1; k <= cnt; k++){
+                    if((l >> (k - 1)) & 1) v1.push_back(_vector[k-1]);
+                    else v2.push_back(_vector[k-1]);
+                }
+                if(total_cnt_sort.find(v1) == total_cnt_sort.end()){
+                    cout<<"error"<<endl;
+                    continue;
+                }
+                double _bel = (i->second) / double(total_cnt_sort[v1]);
+                if(_bel < lim_b) continue;
+                for(int j = 0; j < v1.size(); j++){
+                    printf("%s ", (v1)[j].c_str());
+                }
+                printf("-> ");
+                for(int j = 0; j < v2.size(); j++){
+                    printf("%s ", (v2)[j].c_str());
+                }
+                printf("%.4f\n", _bel);
+
+            }
+        }
+
     }
 
 
@@ -304,7 +349,8 @@ private:
     //min limit of support
     int lim_s;
     //min limit of belief
-    int lim_b;
+    double lim_b;
+
 
     //root of FPtree
     node * root;

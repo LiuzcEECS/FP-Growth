@@ -1,2 +1,2 @@
 g++ main.cpp -o main.o
-./main.o test_large.txt 0.00625
+./main.o test_mid.csv 0.007 0.6

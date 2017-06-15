@@ -13,14 +13,16 @@ int main(int argc, char ** argv){
     int i;
     string path = argv[1];
     double sup = atof(argv[2]);
-    double bel = 0.7;
+    double bel = 0.5;
     if(argc > 3){
-        double bel = atof(argv[3]);
+        bel = atof(argv[3]);
     }
     FPtree * f = new FPtree(sup, bel);
     f->read(path.c_str());
     f->cal();
     f->output();
+    //Association analysis
+    f->aa();
     delete f;
     return 0;
 }
