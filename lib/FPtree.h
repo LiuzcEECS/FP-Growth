@@ -375,6 +375,6 @@ private:
     vector<string> item_list;
     //head of every item in the fp-tree
     map<string, node *> header;
-    //list of suffix
+    //list of prefix
     vector<string> prev;
 };
