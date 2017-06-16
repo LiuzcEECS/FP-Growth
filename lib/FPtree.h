@@ -297,7 +297,7 @@ public:
         printf("isSingle is %d\n", is_single);
         #endif
         if(is_single){
-            // if there is, just mining every combination of the suffix and save them
+            // if there is, just mining every combination of the prefix and save them
 
             prev.push_back(item);
             //cout<<prev[0]<<endl;
@@ -310,7 +310,7 @@ public:
             //}
         }
         else{
-            // if not, we push this item into suffix and save the new suffix as a fp
+            // if not, we push this item into prefix and save the new prefix as a fp
             prev.push_back(item);
             // then loop through every item of which frequency larger than support and try to get their conditional tree until the tree is empty or a single path
             for(int i = next_item_list.size() - 1; i >= 0; i--){
@@ -441,6 +441,6 @@ private:
     vector<string> item_list;
     //head of every item in the fp-tree
     map<string, node *> header;
-    //list of suffix
+    //list of prefix
     vector<string> prev;
 };
